@@ -20,11 +20,22 @@ fun isStoplisted(parts: List<String>): Boolean {
 }
 
 private object Resources {
+    private val NULL_MARKER = Any()
+    private val cache = java.util.concurrent.ConcurrentHashMap<String, Any>()
+
     val tlds = readList("/tlds.txt") ?: error("Cannot find /tlds.txt")
     val stoplist = readList("/stoplist.txt") ?: error("Cannot find /stoplist.txt")
 
     fun readList(resource: String) : Set<String>? {
-        return File("lib/domains/$resource").takeIf { it.exists() }?.bufferedReader()?.lineSequence()?.toHashSet()
+        val cached = cache[resource]
+        if (cached != null) {
+            @Suppress("UNCHECKED_CAST")
+            return if (cached === NULL_MARKER) null else cached as Set<String>
+        }
+
+        val result = File("lib/domains/$resource").takeIf { it.exists() }?.bufferedReader()?.lineSequence()?.toHashSet()
+        cache[resource] = result ?: NULL_MARKER
+        return result
     }
 }
 
