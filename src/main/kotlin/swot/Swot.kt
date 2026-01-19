@@ -3,12 +3,20 @@ package swot
 import java.io.File
 
 fun isAcademic(email: String): Boolean {
-    val parts = domainParts(email)
-    return !isStoplisted(parts) && (isUnderTLD(parts) || findSchoolNames(parts).isNotEmpty())
+    val domain = normalizeDomain(email)
+    if (checkSet(Resources.stoplist, domain)) return false
+    if (checkSet(Resources.tlds, domain)) return true
+
+    val parts = domain.split('.').reversed()
+    return findSchoolNames(parts).isNotEmpty()
 }
 
 fun findSchoolNames(emailOrDomain: String): List<String> {
     return findSchoolNames(domainParts(emailOrDomain))
+}
+
+private fun normalizeDomain(emailOrDomain: String): String {
+    return emailOrDomain.trim().lowercase().substringAfter('@').substringAfter("://").substringBefore(':')
 }
 
 fun isUnderTLD(parts: List<String>): Boolean {
@@ -42,7 +50,19 @@ private fun findSchoolNames(parts: List<String>): List<String> {
 }
 
 private fun domainParts(emailOrDomain: String): List<String> {
-    return emailOrDomain.trim().lowercase().substringAfter('@').substringAfter("://").substringBefore(':').split('.').reversed()
+    return normalizeDomain(emailOrDomain).split('.').reversed()
+}
+
+internal fun checkSet(set: Set<String>, domain: String): Boolean {
+    var searchEnd = domain.length
+    while (true) {
+        val lastDot = domain.lastIndexOf('.', searchEnd - 1)
+        val suffix = if (lastDot == -1) domain else domain.substring(lastDot + 1)
+        if (set.contains(suffix)) return true
+        if (lastDot == -1) break
+        searchEnd = lastDot
+    }
+    return false
 }
 
 internal fun checkSet(set: Set<String>, parts: List<String>): Boolean {
