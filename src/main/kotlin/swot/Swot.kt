@@ -24,7 +24,7 @@ private object Resources {
     val stoplist = readList("/stoplist.txt") ?: error("Cannot find /stoplist.txt")
 
     fun readList(resource: String) : Set<String>? {
-        return File("lib/domains/$resource").takeIf { it.exists() }?.bufferedReader()?.lineSequence()?.toHashSet()
+        return File("lib/domains/$resource").takeIf { it.exists() }?.useLines { it.toHashSet() }
     }
 }
 
@@ -46,11 +46,10 @@ private fun domainParts(emailOrDomain: String): List<String> {
 }
 
 internal fun checkSet(set: Set<String>, parts: List<String>): Boolean {
-    val subj = StringBuilder()
+    var subj = ""
     for (part in parts) {
-        subj.insert(0, part)
-        if (set.contains(subj.toString())) return true
-        subj.insert(0 ,'.')
+        subj = if (subj.isEmpty()) part else part + "." + subj
+        if (set.contains(subj)) return true
     }
     return false
 }
