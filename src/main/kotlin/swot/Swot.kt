@@ -3,8 +3,12 @@ package swot
 import java.io.File
 
 fun isAcademic(email: String): Boolean {
-    val parts = domainParts(email)
-    return !isStoplisted(parts) && (isUnderTLD(parts) || findSchoolNames(parts).isNotEmpty())
+    val domain = normalize(email)
+    if (isStoplisted(domain)) return false
+    if (isUnderTLD(domain)) return true
+
+    val parts = domain.split('.').reversed()
+    return findSchoolNames(parts).isNotEmpty()
 }
 
 fun findSchoolNames(emailOrDomain: String): List<String> {
@@ -15,8 +19,16 @@ fun isUnderTLD(parts: List<String>): Boolean {
     return checkSet(Resources.tlds, parts)
 }
 
+private fun isUnderTLD(domain: String): Boolean {
+    return checkSet(Resources.tlds, domain)
+}
+
 fun isStoplisted(parts: List<String>): Boolean {
     return checkSet(Resources.stoplist, parts)
+}
+
+private fun isStoplisted(domain: String): Boolean {
+    return checkSet(Resources.stoplist, domain)
 }
 
 private object Resources {
@@ -41,8 +53,12 @@ private fun findSchoolNames(parts: List<String>): List<String> {
     return arrayListOf()
 }
 
+private fun normalize(emailOrDomain: String): String {
+    return emailOrDomain.trim().lowercase().substringAfter('@').substringAfter("://").substringBefore(':')
+}
+
 private fun domainParts(emailOrDomain: String): List<String> {
-    return emailOrDomain.trim().lowercase().substringAfter('@').substringAfter("://").substringBefore(':').split('.').reversed()
+    return normalize(emailOrDomain).split('.').reversed()
 }
 
 internal fun checkSet(set: Set<String>, parts: List<String>): Boolean {
@@ -53,4 +69,13 @@ internal fun checkSet(set: Set<String>, parts: List<String>): Boolean {
         subj.insert(0 ,'.')
     }
     return false
+}
+
+internal fun checkSet(set: Set<String>, domain: String): Boolean {
+    var index = domain.lastIndexOf('.')
+    while (index != -1) {
+        if (set.contains(domain.substring(index + 1))) return true
+        index = domain.lastIndexOf('.', index - 1)
+    }
+    return set.contains(domain)
 }
