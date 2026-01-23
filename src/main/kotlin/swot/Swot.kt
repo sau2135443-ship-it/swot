@@ -3,8 +3,10 @@ package swot
 import java.io.File
 
 fun isAcademic(email: String): Boolean {
-    val parts = domainParts(email)
-    return !isStoplisted(parts) && (isUnderTLD(parts) || findSchoolNames(parts).isNotEmpty())
+    val domain = normalize(email)
+    if (isStoplisted(domain)) return false
+    if (isUnderTLD(domain)) return true
+    return findSchoolNames(domainParts(domain)).isNotEmpty()
 }
 
 fun findSchoolNames(emailOrDomain: String): List<String> {
@@ -15,8 +17,16 @@ fun isUnderTLD(parts: List<String>): Boolean {
     return checkSet(Resources.tlds, parts)
 }
 
+fun isUnderTLD(domain: String): Boolean {
+    return checkSuffixes(Resources.tlds, domain)
+}
+
 fun isStoplisted(parts: List<String>): Boolean {
     return checkSet(Resources.stoplist, parts)
+}
+
+fun isStoplisted(domain: String): Boolean {
+    return checkSuffixes(Resources.stoplist, domain)
 }
 
 private object Resources {
@@ -42,7 +52,11 @@ private fun findSchoolNames(parts: List<String>): List<String> {
 }
 
 private fun domainParts(emailOrDomain: String): List<String> {
-    return emailOrDomain.trim().lowercase().substringAfter('@').substringAfter("://").substringBefore(':').split('.').reversed()
+    return normalize(emailOrDomain).split('.').reversed()
+}
+
+private fun normalize(emailOrDomain: String): String {
+    return emailOrDomain.trim().lowercase().substringAfter('@').substringAfter("://").substringBefore(':')
 }
 
 internal fun checkSet(set: Set<String>, parts: List<String>): Boolean {
@@ -52,5 +66,15 @@ internal fun checkSet(set: Set<String>, parts: List<String>): Boolean {
         if (set.contains(subj.toString())) return true
         subj.insert(0 ,'.')
     }
+    return false
+}
+
+internal fun checkSuffixes(set: Set<String>, domain: String): Boolean {
+    var idx = domain.lastIndexOf('.')
+    while (idx != -1) {
+        if (set.contains(domain.substring(idx + 1))) return true
+        idx = domain.lastIndexOf('.', idx - 1)
+    }
+    if (set.contains(domain)) return true
     return false
 }
