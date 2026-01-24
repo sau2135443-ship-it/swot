@@ -46,11 +46,12 @@ private fun domainParts(emailOrDomain: String): List<String> {
 }
 
 internal fun checkSet(set: Set<String>, parts: List<String>): Boolean {
-    val subj = StringBuilder()
+    var subj = ""
+    // StringBuilder.insert(0) is O(N) causing O(N^2) complexity.
+    // String concatenation here is significantly faster for the expected string lengths.
     for (part in parts) {
-        subj.insert(0, part)
-        if (set.contains(subj.toString())) return true
-        subj.insert(0 ,'.')
+        subj = if (subj.isEmpty()) part else "$part.$subj"
+        if (set.contains(subj)) return true
     }
     return false
 }
