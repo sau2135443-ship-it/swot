@@ -1,0 +1,2 @@
+Old implementation (parts): 1313ms
+New implementation (string): 693ms
