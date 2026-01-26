@@ -3,8 +3,8 @@ package swot
 import java.io.File
 
 fun isAcademic(email: String): Boolean {
-    val parts = domainParts(email)
-    return !isStoplisted(parts) && (isUnderTLD(parts) || findSchoolNames(parts).isNotEmpty())
+    val domain = normalizeDomain(email)
+    return !checkSet(Resources.stoplist, domain) && (checkSet(Resources.tlds, domain) || findSchoolNames(domain).isNotEmpty())
 }
 
 fun findSchoolNames(emailOrDomain: String): List<String> {
@@ -15,8 +15,16 @@ fun isUnderTLD(parts: List<String>): Boolean {
     return checkSet(Resources.tlds, parts)
 }
 
+fun isUnderTLD(emailOrDomain: String): Boolean {
+    return checkSet(Resources.tlds, normalizeDomain(emailOrDomain))
+}
+
 fun isStoplisted(parts: List<String>): Boolean {
     return checkSet(Resources.stoplist, parts)
+}
+
+fun isStoplisted(emailOrDomain: String): Boolean {
+    return checkSet(Resources.stoplist, normalizeDomain(emailOrDomain))
 }
 
 private object Resources {
@@ -42,7 +50,11 @@ private fun findSchoolNames(parts: List<String>): List<String> {
 }
 
 private fun domainParts(emailOrDomain: String): List<String> {
-    return emailOrDomain.trim().lowercase().substringAfter('@').substringAfter("://").substringBefore(':').split('.').reversed()
+    return normalizeDomain(emailOrDomain).split('.').reversed()
+}
+
+private fun normalizeDomain(emailOrDomain: String): String {
+    return emailOrDomain.trim().lowercase().substringAfter('@').substringAfter("://").substringBefore(':')
 }
 
 internal fun checkSet(set: Set<String>, parts: List<String>): Boolean {
@@ -51,6 +63,16 @@ internal fun checkSet(set: Set<String>, parts: List<String>): Boolean {
         subj.insert(0, part)
         if (set.contains(subj.toString())) return true
         subj.insert(0 ,'.')
+    }
+    return false
+}
+
+internal fun checkSet(set: Set<String>, domain: String): Boolean {
+    if (set.contains(domain)) return true
+    var index = domain.lastIndexOf('.')
+    while (index != -1) {
+        if (set.contains(domain.substring(index + 1))) return true
+        index = domain.lastIndexOf('.', index - 1)
     }
     return false
 }
