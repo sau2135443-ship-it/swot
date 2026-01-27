@@ -3,8 +3,12 @@ package swot
 import java.io.File
 
 fun isAcademic(email: String): Boolean {
-    val parts = domainParts(email)
-    return !isStoplisted(parts) && (isUnderTLD(parts) || findSchoolNames(parts).isNotEmpty())
+    val domain = normalizeDomain(email)
+    if (isStoplisted(domain)) return false
+    if (isUnderTLD(domain)) return true
+
+    val parts = domain.split('.').reversed()
+    return findSchoolNames(parts).isNotEmpty()
 }
 
 fun findSchoolNames(emailOrDomain: String): List<String> {
@@ -17,6 +21,14 @@ fun isUnderTLD(parts: List<String>): Boolean {
 
 fun isStoplisted(parts: List<String>): Boolean {
     return checkSet(Resources.stoplist, parts)
+}
+
+internal fun isUnderTLD(domain: String): Boolean {
+    return checkSet(Resources.tlds, domain)
+}
+
+internal fun isStoplisted(domain: String): Boolean {
+    return checkSet(Resources.stoplist, domain)
 }
 
 private object Resources {
@@ -41,16 +53,25 @@ private fun findSchoolNames(parts: List<String>): List<String> {
     return arrayListOf()
 }
 
+private fun normalizeDomain(emailOrDomain: String): String {
+    return emailOrDomain.trim().lowercase().substringAfter('@').substringAfter("://").substringBefore(':')
+}
+
 private fun domainParts(emailOrDomain: String): List<String> {
-    return emailOrDomain.trim().lowercase().substringAfter('@').substringAfter("://").substringBefore(':').split('.').reversed()
+    return normalizeDomain(emailOrDomain).split('.').reversed()
 }
 
 internal fun checkSet(set: Set<String>, parts: List<String>): Boolean {
-    val subj = StringBuilder()
-    for (part in parts) {
-        subj.insert(0, part)
-        if (set.contains(subj.toString())) return true
-        subj.insert(0 ,'.')
+    val domain = parts.reversed().joinToString(".")
+    return checkSet(set, domain)
+}
+
+internal fun checkSet(set: Set<String>, domain: String): Boolean {
+    var nextDot = domain.lastIndexOf('.')
+    while (nextDot != -1) {
+        if (set.contains(domain.substring(nextDot + 1))) return true
+        nextDot = domain.lastIndexOf('.', nextDot - 1)
     }
+    if (set.contains(domain)) return true
     return false
 }
